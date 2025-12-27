@@ -18,9 +18,8 @@ export const ZAMA_CONFIG = {
   },
 };
 
-// Your deployed contract address - UPDATE AFTER DEPLOYMENT
-// Deploy with: npm run deploy:sepolia
-export const CONTRACT_ADDRESS = "0x0000000000000000000000000000000000000000";
+// Deployed contract address on Sepolia
+export const CONTRACT_ADDRESS = "0xBBfd909b4dE6A4FFe72d67571c679EBF7140d871";
 
 // Check if contract is deployed
 export const IS_CONTRACT_DEPLOYED = CONTRACT_ADDRESS !== "0x0000000000000000000000000000000000000000";
