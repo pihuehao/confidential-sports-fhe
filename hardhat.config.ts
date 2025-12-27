@@ -6,17 +6,14 @@ dotenv.config();
 
 const PRIVATE_KEY = process.env.PRIVATE_KEY || "0x0000000000000000000000000000000000000000000000000000000000000001";
 
-// Zama Ethereum Devnet Configuration (NOT Sepolia!)
-const ZamaEthereumConfig = {
-  chainId: 8009,
-  urls: {
-    rpc: "https://devnet.zama.ai",
-    gateway: "https://gateway.devnet.zama.ai",
-    kmsVerifier: "https://kms-verifier.devnet.zama.ai",
-    aclAddress: "0x339EcE85B9E11a3A3AA557582784a15d7F82AAf2",
-    tfheExecutorAddress: "0x687408ab54661ba0b4aef3a44156c616c6955e07",
-    kmsVerifierAddress: "0x208De73316E44722e16f6dDFF40881A3e4F86104",
-    gatewayAddress: "0x33347831500F1e73f0ccCBb95c9f86B94d7b1123",
+// Zama FHE on Sepolia Configuration
+const ZamaSepoliaConfig = {
+  chainId: 11155111,
+  rpcUrl: "https://sepolia.gateway.tenderly.co",
+  contracts: {
+    acl: "0xf0Ffdc93b7E186bC2f8CB3dAA75D86d1930A433D",
+    coprocessor: "0x92C920834Ec8941d2C77D188936E1f7A6f49c127",
+    kmsVerifier: "0xbE0E383937d564D7FF0BC3b46c51f0bF8d5C311A",
   },
 };
 
@@ -36,15 +33,9 @@ const config: HardhatUserConfig = {
     hardhat: {
       chainId: 31337,
     },
-    zama: {
-      url: ZamaEthereumConfig.urls.rpc,
-      chainId: ZamaEthereumConfig.chainId,
-      accounts: [PRIVATE_KEY],
-    },
-    // Legacy sepolia kept for reference but use 'zama' network
     sepolia: {
-      url: ZamaEthereumConfig.urls.rpc,
-      chainId: ZamaEthereumConfig.chainId,
+      url: ZamaSepoliaConfig.rpcUrl,
+      chainId: ZamaSepoliaConfig.chainId,
       accounts: [PRIVATE_KEY],
     },
   },
@@ -62,5 +53,4 @@ const config: HardhatUserConfig = {
 
 export default config;
 
-// Export Zama config for use in scripts
-export { ZamaEthereumConfig };
+export { ZamaSepoliaConfig };

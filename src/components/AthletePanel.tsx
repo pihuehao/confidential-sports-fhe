@@ -1,12 +1,57 @@
-import { useState } from 'react';
-import { Shield, UserPlus, Lock, Eye, EyeOff } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { useAccount } from 'wagmi';
+import { Shield, UserPlus, Lock, Eye, EyeOff, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useContract } from '../hooks/useContract';
+import { IS_CONTRACT_DEPLOYED } from '../config';
+
+interface AthleteInfo {
+  id: number;
+  name: string;
+  teamId: number;
+  isActive: boolean;
+  contractEndDate: number;
+}
 
 export default function AthletePanel() {
+  const { address } = useAccount();
+  const { registerAthlete, getAthleteInfo, getAthleteByWallet, getAthleteCount, fhevmReady } = useContract();
+
   const [showRegisterForm, setShowRegisterForm] = useState(false);
   const [athleteName, setAthleteName] = useState('');
   const [isRegistering, setIsRegistering] = useState(false);
   const [showSalary, setShowSalary] = useState(false);
+  const [myAthlete, setMyAthlete] = useState<AthleteInfo | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  // Check if user is already registered
+  useEffect(() => {
+    if (address && IS_CONTRACT_DEPLOYED) {
+      checkRegistration();
+    }
+  }, [address]);
+
+  const checkRegistration = async () => {
+    if (!address) return;
+    setLoading(true);
+    try {
+      const athleteId = await getAthleteByWallet(address);
+      if (Number(athleteId) > 0) {
+        const info = await getAthleteInfo(Number(athleteId));
+        setMyAthlete({
+          id: Number(athleteId),
+          name: info[0],
+          teamId: Number(info[1]),
+          isActive: info[2],
+          contractEndDate: Number(info[3]),
+        });
+      }
+    } catch (err) {
+      console.error('Check registration error:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -15,17 +60,31 @@ export default function AthletePanel() {
       return;
     }
 
+    if (!IS_CONTRACT_DEPLOYED) {
+      toast.error('Contract not deployed yet');
+      return;
+    }
+
     setIsRegistering(true);
+    const toastId = toast.loading('Registering as athlete...');
+
     try {
-      // TODO: Integrate with contract
-      toast.success('Athlete registration initiated');
+      await registerAthlete(athleteName);
+      toast.success('Successfully registered as athlete!', { id: toastId });
       setShowRegisterForm(false);
       setAthleteName('');
-    } catch (error) {
-      toast.error('Failed to register');
+      checkRegistration(); // Reload
+    } catch (error: any) {
+      console.error('Register error:', error);
+      toast.error(error.message || 'Failed to register', { id: toastId });
     } finally {
       setIsRegistering(false);
     }
+  };
+
+  const formatDate = (timestamp: number) => {
+    if (timestamp === 0) return 'No active contract';
+    return new Date(timestamp * 1000).toLocaleDateString();
   };
 
   return (
@@ -34,16 +93,32 @@ export default function AthletePanel() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold">Athlete Portal</h2>
-          <p className="text-[var(--text-secondary)]">Register and manage your profile with encrypted salary data</p>
+          <p className="text-[var(--text-secondary)]">
+            Register and manage your profile with encrypted salary data
+          </p>
         </div>
-        <button
-          onClick={() => setShowRegisterForm(true)}
-          className="btn-primary flex items-center gap-2"
-        >
-          <UserPlus size={18} />
-          Register as Athlete
-        </button>
+        {!myAthlete && (
+          <button
+            onClick={() => setShowRegisterForm(true)}
+            className="btn-primary flex items-center gap-2"
+            disabled={!IS_CONTRACT_DEPLOYED}
+          >
+            <UserPlus size={18} />
+            Register as Athlete
+          </button>
+        )}
       </div>
+
+      {/* Contract Not Deployed Warning */}
+      {!IS_CONTRACT_DEPLOYED && (
+        <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4 flex items-center gap-3">
+          <AlertCircle className="text-red-500" size={20} />
+          <div>
+            <p className="text-red-400 font-medium">Contract Not Deployed</p>
+            <p className="text-red-400/70 text-sm">Deploy contract first to register</p>
+          </div>
+        </div>
+      )}
 
       {/* Register Modal */}
       {showRegisterForm && (
@@ -72,7 +147,7 @@ export default function AthletePanel() {
                 <p className="text-sm text-[var(--text-secondary)]">
                   <Lock size={14} className="inline mr-1" />
                   Your wallet address will be linked to your profile. All salary data
-                  will be encrypted and only visible to you and authorized parties.
+                  will be encrypted with FHE and only visible to you and authorized parties.
                 </p>
               </div>
 
@@ -87,9 +162,16 @@ export default function AthletePanel() {
                 <button
                   type="submit"
                   disabled={isRegistering}
-                  className="btn-primary flex-1"
+                  className="btn-primary flex-1 flex items-center justify-center gap-2"
                 >
-                  {isRegistering ? 'Registering...' : 'Register'}
+                  {isRegistering ? (
+                    <>
+                      <Loader2 className="animate-spin" size={18} />
+                      Registering...
+                    </>
+                  ) : (
+                    'Register'
+                  )}
                 </button>
               </div>
             </form>
@@ -101,57 +183,98 @@ export default function AthletePanel() {
       <div className="card-gradient rounded-xl p-6">
         <h3 className="font-semibold mb-4">Your Profile</h3>
 
-        <div className="text-center py-12">
-          <div className="w-16 h-16 bg-[var(--bg-secondary)] rounded-full flex items-center justify-center mx-auto mb-4">
-            <Shield size={28} className="text-[var(--text-secondary)]" />
+        {loading ? (
+          <div className="text-center py-12">
+            <Loader2 className="animate-spin mx-auto mb-4" size={32} />
+            <p className="text-[var(--text-secondary)]">Loading profile...</p>
           </div>
-          <p className="text-[var(--text-secondary)] mb-2">Not registered yet</p>
-          <p className="text-sm text-[var(--text-secondary)]">
-            Register to receive contract proposals from teams
-          </p>
-        </div>
+        ) : myAthlete ? (
+          <div className="space-y-4">
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-16 bg-[var(--accent-purple)]/20 rounded-full flex items-center justify-center">
+                <Shield size={28} className="text-[var(--accent-purple)]" />
+              </div>
+              <div>
+                <p className="text-xl font-bold">{myAthlete.name}</p>
+                <p className="text-sm text-[var(--text-secondary)]">Athlete ID: #{myAthlete.id}</p>
+              </div>
+              <div className="ml-auto">
+                <span className={`px-3 py-1 rounded-full text-xs ${myAthlete.isActive ? 'bg-green-500/20 text-green-400' : 'bg-gray-500/20 text-gray-400'}`}>
+                  {myAthlete.isActive ? 'Active' : 'Inactive'}
+                </span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-[var(--bg-secondary)] rounded-lg p-4">
+                <p className="text-sm text-[var(--text-secondary)]">Team ID</p>
+                <p className="text-lg font-medium">
+                  {myAthlete.teamId > 0 ? `#${myAthlete.teamId}` : 'No team'}
+                </p>
+              </div>
+              <div className="bg-[var(--bg-secondary)] rounded-lg p-4">
+                <p className="text-sm text-[var(--text-secondary)]">Contract Ends</p>
+                <p className="text-lg font-medium">{formatDate(myAthlete.contractEndDate)}</p>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="text-center py-12">
+            <div className="w-16 h-16 bg-[var(--bg-secondary)] rounded-full flex items-center justify-center mx-auto mb-4">
+              <Shield size={28} className="text-[var(--text-secondary)]" />
+            </div>
+            <p className="text-[var(--text-secondary)] mb-2">Not registered yet</p>
+            <p className="text-sm text-[var(--text-secondary)]">
+              Register to receive contract proposals from teams
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Encrypted Data Preview */}
-      <div className="grid md:grid-cols-2 gap-6">
-        <div className="card-gradient rounded-xl p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold flex items-center gap-2">
-              <Lock size={18} className="text-[var(--accent-green)]" />
-              Encrypted Salary
-            </h3>
-            <button
-              onClick={() => setShowSalary(!showSalary)}
-              className="text-[var(--text-secondary)] hover:text-white transition-colors"
-            >
-              {showSalary ? <EyeOff size={18} /> : <Eye size={18} />}
-            </button>
+      {myAthlete && (
+        <div className="grid md:grid-cols-2 gap-6">
+          <div className="card-gradient rounded-xl p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-semibold flex items-center gap-2">
+                <Lock size={18} className="text-[var(--accent-green)]" />
+                Encrypted Salary
+              </h3>
+              <button
+                onClick={() => setShowSalary(!showSalary)}
+                className="text-[var(--text-secondary)] hover:text-white transition-colors"
+              >
+                {showSalary ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
+            <div className="bg-[var(--bg-secondary)] rounded-lg p-4 font-mono text-sm">
+              {showSalary ? (
+                <span className="text-[var(--text-secondary)]">
+                  Decryption requires FHE reencryption...
+                </span>
+              ) : (
+                <span className="text-[var(--accent-purple)]">••••••••••••</span>
+              )}
+            </div>
+            <p className="text-xs text-[var(--text-secondary)] mt-2">
+              Only you can request decryption of your salary
+            </p>
           </div>
-          <div className="bg-[var(--bg-secondary)] rounded-lg p-4 font-mono text-sm">
-            {showSalary ? (
-              <span className="text-[var(--text-secondary)]">No salary data yet</span>
-            ) : (
-              <span className="text-[var(--accent-purple)]">••••••••••••</span>
-            )}
-          </div>
-          <p className="text-xs text-[var(--text-secondary)] mt-2">
-            Only you can request decryption of your salary
-          </p>
-        </div>
 
-        <div className="card-gradient rounded-xl p-6">
-          <h3 className="font-semibold mb-4 flex items-center gap-2">
-            <Lock size={18} className="text-[var(--accent-blue)]" />
-            Encrypted Bonus
-          </h3>
-          <div className="bg-[var(--bg-secondary)] rounded-lg p-4 font-mono text-sm">
-            <span className="text-[var(--accent-purple)]">••••••••••••</span>
+          <div className="card-gradient rounded-xl p-6">
+            <h3 className="font-semibold mb-4 flex items-center gap-2">
+              <Lock size={18} className="text-[var(--accent-blue)]" />
+              Encrypted Bonus
+            </h3>
+            <div className="bg-[var(--bg-secondary)] rounded-lg p-4 font-mono text-sm">
+              <span className="text-[var(--accent-purple)]">••••••••••••</span>
+            </div>
+            <p className="text-xs text-[var(--text-secondary)] mt-2">
+              Bonus data is also encrypted using FHE
+            </p>
           </div>
-          <p className="text-xs text-[var(--text-secondary)] mt-2">
-            Bonus data is also encrypted using FHE
-          </p>
         </div>
-      </div>
+      )}
 
       {/* Info Card */}
       <div className="card-gradient rounded-xl p-6">
@@ -159,7 +282,7 @@ export default function AthletePanel() {
         <ul className="space-y-2 text-sm text-[var(--text-secondary)]">
           <li className="flex items-start gap-2">
             <span className="text-[var(--accent-purple)]">•</span>
-            Your salary is never visible on-chain to anyone except you
+            Your salary is <strong>never visible on-chain</strong> to anyone except you
           </li>
           <li className="flex items-start gap-2">
             <span className="text-[var(--accent-purple)]">•</span>
@@ -167,7 +290,11 @@ export default function AthletePanel() {
           </li>
           <li className="flex items-start gap-2">
             <span className="text-[var(--accent-purple)]">•</span>
-            Approve or reject proposals without revealing your current salary
+            Approve or reject proposals <strong>without revealing</strong> your current salary
+          </li>
+          <li className="flex items-start gap-2">
+            <span className="text-[var(--accent-purple)]">•</span>
+            All FHE operations are performed by the <strong>Zama coprocessor</strong>
           </li>
         </ul>
       </div>

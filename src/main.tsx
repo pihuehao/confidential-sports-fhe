@@ -6,28 +6,17 @@ import './index.css';
 import '@rainbow-me/rainbowkit/styles.css';
 import { RainbowKitProvider, getDefaultConfig } from '@rainbow-me/rainbowkit';
 import { WagmiProvider, http } from 'wagmi';
+import { sepolia } from 'wagmi/chains';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ZAMA_CONFIG } from './config';
 
-// Define Zama chain
-const zamaChain = {
-  id: ZAMA_CONFIG.chainId,
-  name: ZAMA_CONFIG.chainName,
-  nativeCurrency: ZAMA_CONFIG.currency,
-  rpcUrls: {
-    default: { http: [ZAMA_CONFIG.rpcUrl] },
-  },
-  blockExplorers: {
-    default: { name: 'Explorer', url: ZAMA_CONFIG.blockExplorer },
-  },
-} as const;
-
+// Configure Sepolia with Zama FHE
 const config = getDefaultConfig({
-  appName: 'Confidential Sports',
-  projectId: 'confidential-sports-fhe',
-  chains: [zamaChain],
+  appName: 'Confidential Sports FHE',
+  projectId: 'confidential-sports-fhe', // WalletConnect project ID
+  chains: [sepolia],
   transports: {
-    [zamaChain.id]: http(ZAMA_CONFIG.rpcUrl),
+    [sepolia.id]: http(ZAMA_CONFIG.rpcUrl),
   },
 });
 
