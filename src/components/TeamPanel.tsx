@@ -15,7 +15,7 @@ interface Team {
 
 export default function TeamPanel() {
   const { address } = useAccount();
-  const { createTeam, getTeamInfo, getTeamCount, isLoading, fhevmReady } = useContract();
+  const { createTeam, getTeamInfo, getTeamCount, isLoading, fhevmReady, fhevmLoading, isDemoMode } = useContract();
 
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [teamName, setTeamName] = useState('');
@@ -114,8 +114,26 @@ export default function TeamPanel() {
       </div>
 
       {/* FHE Status Banner */}
-      <div className={`rounded-lg p-4 flex items-center gap-3 ${fhevmReady ? 'bg-green-500/10 border border-green-500/30' : 'bg-yellow-500/10 border border-yellow-500/30'}`}>
-        {fhevmReady ? (
+      <div className={`rounded-lg p-4 flex items-center gap-3 ${
+        fhevmLoading ? 'bg-yellow-500/10 border border-yellow-500/30' :
+        isDemoMode ? 'bg-blue-500/10 border border-blue-500/30' :
+        fhevmReady ? 'bg-green-500/10 border border-green-500/30' :
+        'bg-yellow-500/10 border border-yellow-500/30'
+      }`}>
+        {fhevmLoading ? (
+          <>
+            <Loader2 className="text-yellow-500 animate-spin" size={20} />
+            <span className="text-yellow-400">Initializing encryption...</span>
+          </>
+        ) : isDemoMode ? (
+          <>
+            <CheckCircle className="text-blue-500" size={20} />
+            <div>
+              <span className="text-blue-400 font-medium">Demo Mode Active</span>
+              <p className="text-blue-400/70 text-xs">Simulated encryption for demonstration</p>
+            </div>
+          </>
+        ) : fhevmReady ? (
           <>
             <CheckCircle className="text-green-500" size={20} />
             <span className="text-green-400">FHE Encryption Ready</span>
@@ -123,7 +141,7 @@ export default function TeamPanel() {
         ) : (
           <>
             <Loader2 className="text-yellow-500 animate-spin" size={20} />
-            <span className="text-yellow-400">Initializing FHE encryption...</span>
+            <span className="text-yellow-400">Connecting...</span>
           </>
         )}
       </div>

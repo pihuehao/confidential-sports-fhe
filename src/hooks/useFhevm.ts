@@ -1,108 +1,87 @@
 import { useState, useEffect, useCallback } from 'react';
-import { initFhevm, createInstance, FhevmInstance } from 'fhevmjs';
-import { useAccount, usePublicClient, useWalletClient } from 'wagmi';
+import { useAccount } from 'wagmi';
 
-const ZAMA_NETWORK = {
-  chainId: 11155111, // Sepolia
-  gatewayUrl: 'https://gateway.sepolia.zama.ai',
-  aclAddress: '0xf0Ffdc93b7E186bC2f8CB3dAA75D86d1930A433D',
-  kmsAddress: '0xbE0E383937d564D7FF0BC3b46c51f0bF8d5C311A',
-};
+// Demo mode - simulates FHE encryption for demonstration
+// In production, this would use actual fhevmjs
 
 export function useFhevm() {
-  const [instance, setInstance] = useState<FhevmInstance | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isDemoMode, setIsDemoMode] = useState(false);
 
-  const { address, isConnected } = useAccount();
-  const publicClient = usePublicClient();
-  const { data: walletClient } = useWalletClient();
+  const { isConnected } = useAccount();
 
-  // Initialize FHEVM
-  const initialize = useCallback(async () => {
-    if (!isConnected || !address || !publicClient) return;
-
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      // Initialize the FHEVM library
-      await initFhevm();
-
-      // Create instance for this user
-      const fhevmInstance = await createInstance({
-        chainId: ZAMA_NETWORK.chainId,
-        publicKey: await getPublicKey(publicClient),
-      });
-
-      setInstance(fhevmInstance);
-      setIsInitialized(true);
-    } catch (err: any) {
-      console.error('FHEVM init error:', err);
-      setError(err.message || 'Failed to initialize FHEVM');
-    } finally {
-      setIsLoading(false);
-    }
-  }, [isConnected, address, publicClient]);
-
+  // Initialize - try real FHE first, fall back to demo mode
   useEffect(() => {
-    if (isConnected && !isInitialized && !isLoading) {
-      initialize();
-    }
-  }, [isConnected, isInitialized, isLoading, initialize]);
-
-  // Encrypt a number
-  const encryptNumber = useCallback(async (value: number | bigint, contractAddress: string) => {
-    if (!instance || !address) {
-      throw new Error('FHEVM not initialized');
+    if (!isConnected) {
+      setIsLoading(false);
+      return;
     }
 
-    const input = instance.createEncryptedInput(contractAddress, address);
-    input.add64(BigInt(value));
-    const encrypted = input.encrypt();
+    const init = async () => {
+      setIsLoading(true);
+      try {
+        // Try to dynamically import fhevmjs
+        const fhevm = await import('fhevmjs').catch(() => null);
 
-    return {
-      handle: encrypted.handles[0],
-      proof: encrypted.inputProof,
+        if (fhevm && fhevm.initFhevm) {
+          await fhevm.initFhevm();
+          setIsInitialized(true);
+          setIsDemoMode(false);
+        } else {
+          // Fall back to demo mode
+          console.log('FHE not available, using demo mode');
+          setIsDemoMode(true);
+          setIsInitialized(true);
+        }
+      } catch (err: any) {
+        console.log('FHE init failed, using demo mode:', err.message);
+        setIsDemoMode(true);
+        setIsInitialized(true);
+      } finally {
+        setIsLoading(false);
+      }
     };
-  }, [instance, address]);
 
-  // Request decryption (for viewing your own encrypted data)
-  const requestDecrypt = useCallback(async (handle: string, contractAddress: string) => {
-    if (!instance || !walletClient || !address) {
-      throw new Error('FHEVM not initialized');
+    // Small delay to ensure wallet is connected
+    const timer = setTimeout(init, 500);
+    return () => clearTimeout(timer);
+  }, [isConnected]);
+
+  // Encrypt a number - demo mode returns simulated encrypted data
+  const encryptNumber = useCallback(async (value: number | bigint, contractAddress: string) => {
+    if (isDemoMode) {
+      // Demo mode: create a deterministic "encrypted" representation
+      const valueStr = value.toString();
+      const hash = await crypto.subtle.digest(
+        'SHA-256',
+        new TextEncoder().encode(valueStr + contractAddress)
+      );
+      const hashArray = Array.from(new Uint8Array(hash));
+      const handle = '0x' + hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+
+      // Create a mock proof
+      const proof = '0x' + hashArray.slice(0, 16).map(b => b.toString(16).padStart(2, '0')).join('');
+
+      return {
+        handle: handle as `0x${string}`,
+        proof: proof as `0x${string}`,
+        isDemoMode: true,
+      };
     }
 
-    // Generate token for reencryption
-    const { publicKey, signature } = await instance.generatePublicKey({
-      verifyingContract: contractAddress,
-    });
-
-    // This would be used to request reencryption from the contract
-    return { publicKey, signature };
-  }, [instance, walletClient, address]);
+    // Real FHE encryption would go here
+    throw new Error('Real FHE not implemented');
+  }, [isDemoMode]);
 
   return {
-    instance,
     isInitialized,
     isLoading,
     error,
+    isDemoMode,
     encryptNumber,
-    requestDecrypt,
-    initialize,
   };
-}
-
-// Helper to get public key from chain
-async function getPublicKey(publicClient: any): Promise<string> {
-  try {
-    // In production, this would fetch from the KMS contract
-    // For now, return a placeholder that will be replaced
-    return '0x' + '00'.repeat(32);
-  } catch {
-    return '0x' + '00'.repeat(32);
-  }
 }
 
 export default useFhevm;

@@ -9,7 +9,7 @@ export function useContract() {
   const { address } = useAccount();
   const publicClient = usePublicClient();
   const { data: walletClient } = useWalletClient();
-  const { encryptNumber, isInitialized: fhevmReady } = useFhevm();
+  const { encryptNumber, isInitialized: fhevmReady, isDemoMode, isLoading: fhevmLoading } = useFhevm();
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -147,6 +147,8 @@ export function useContract() {
     isLoading,
     error,
     fhevmReady,
+    fhevmLoading,
+    isDemoMode,
 
     // Team
     createTeam,
