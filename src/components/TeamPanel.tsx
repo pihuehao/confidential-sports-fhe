@@ -1,10 +1,8 @@
 import { useState } from 'react';
-import { useAccount } from 'wagmi';
-import { Users, Plus, Lock, DollarSign } from 'lucide-react';
+import { Users, Plus, Lock } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function TeamPanel() {
-  const { address } = useAccount();
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [teamName, setTeamName] = useState('');
   const [salaryCap, setSalaryCap] = useState('');

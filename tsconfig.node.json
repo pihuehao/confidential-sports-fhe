@@ -6,7 +6,8 @@
     "moduleResolution": "bundler",
     "allowSyntheticDefaultImports": true,
     "strict": true,
-    "noEmit": true
+    "outDir": "./dist-node",
+    "declaration": true
   },
-  "include": ["vite.config.ts", "hardhat.config.ts", "scripts/**/*.ts"]
+  "include": ["vite.config.ts"]
 }

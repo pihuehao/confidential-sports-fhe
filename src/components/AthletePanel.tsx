@@ -1,10 +1,8 @@
 import { useState } from 'react';
-import { useAccount } from 'wagmi';
 import { Shield, UserPlus, Lock, Eye, EyeOff } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function AthletePanel() {
-  const { address } = useAccount();
   const [showRegisterForm, setShowRegisterForm] = useState(false);
   const [athleteName, setAthleteName] = useState('');
   const [isRegistering, setIsRegistering] = useState(false);
