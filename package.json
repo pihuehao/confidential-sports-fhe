@@ -1,0 +1,49 @@
+{
+  "name": "confidential-sports-fhe",
+  "version": "1.0.0",
+  "description": "Privacy-preserving athlete salary management using Zama FHE",
+  "private": true,
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "compile": "npx hardhat compile",
+    "test": "npx hardhat test",
+    "deploy:sepolia": "npx hardhat run scripts/deploy.ts --network sepolia",
+    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "ethers": "^6.14.3",
+    "wagmi": "^2.15.6",
+    "viem": "^2.31.7",
+    "@rainbow-me/rainbowkit": "^2.2.8",
+    "@tanstack/react-query": "^5.86.0",
+    "fhevmjs": "^0.6.2",
+    "react-hot-toast": "^2.5.2",
+    "lucide-react": "^0.510.0"
+  },
+  "devDependencies": {
+    "@fhevm/solidity": "^0.9.1",
+    "@zama-fhe/relayer-sdk": "^0.3.0-8",
+    "hardhat": "^2.25.0",
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "@nomicfoundation/hardhat-ethers": "^3.0.8",
+    "@nomicfoundation/hardhat-chai-matchers": "^2.0.8",
+    "@typechain/hardhat": "^9.1.0",
+    "@typechain/ethers-v6": "^0.5.1",
+    "typechain": "^8.3.2",
+    "dotenv": "^16.5.0",
+    "typescript": "^5.8.3",
+    "vite": "^6.3.5",
+    "@vitejs/plugin-react": "^4.4.1",
+    "tailwindcss": "^4.1.8",
+    "@tailwindcss/vite": "^4.1.8",
+    "@types/react": "^18.3.18",
+    "@types/react-dom": "^18.3.5",
+    "@types/node": "^22.15.29",
+    "eslint": "^9.25.0",
+    "globals": "^16.2.0"
+  }
+}
